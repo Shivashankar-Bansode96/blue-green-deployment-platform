@@ -1,0 +1,19 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: blue-green-health-check
+  namespace: blue-green
+spec:
+  metrics:
+    - name: application-health
+      interval: 10s
+      count: 3
+
+      successCondition: result == 200
+
+      failureLimit: 1
+
+      provider:
+        web:
+          url: http://blue-green-preview/health
+          timeoutSeconds: 5

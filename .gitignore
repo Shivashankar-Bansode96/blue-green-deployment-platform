@@ -1,0 +1,36 @@
+@"
+# Node.js
+node_modules/
+npm-debug.log*
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Jenkins
+jenkins_home/
+*.secret
+
+# Kubernetes
+*.key
+*.pem
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Build / temporary files
+dist/
+build/
+coverage/
+tmp/
+temp/
+"@ | Set-Content .gitignore

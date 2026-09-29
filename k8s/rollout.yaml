@@ -1,0 +1,68 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: blue-green-app
+  namespace: blue-green
+spec:
+  replicas: 3
+
+  revisionHistoryLimit: 2
+
+  selector:
+    matchLabels:
+      app: blue-green-app
+
+  template:
+    metadata:
+      labels:
+        app: blue-green-app
+    spec:
+      containers:
+        - name: blue-green-app
+          image: blue-green-app:v3
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - containerPort: 3000
+
+          env:
+            - name: APP_VERSION
+              value: "v3"
+
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            failureThreshold: 3
+
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+
+  strategy:
+    blueGreen:
+      activeService: blue-green-active
+      previewService: blue-green-preview
+
+      autoPromotionEnabled: false
+
+      scaleDownDelaySeconds: 30
+
+      previewReplicaCount: 3
+
+      prePromotionAnalysis:
+        templates:
+          - templateName: blue-green-health-check
