@@ -8,9 +8,10 @@ spec:
     - name: application-health
       interval: 10s
       count: 3
-      successCondition: result == 200
+      successCondition: result == 'UP'
       failureLimit: 1
       provider:
         web:
           url: http://blue-green-preview.blue-green.svc.cluster.local/health
           timeoutSeconds: 5
+          jsonPath: "{$.status}"
