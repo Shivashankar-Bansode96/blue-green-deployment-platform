@@ -34,6 +34,9 @@ pipeline {
                     Write-Host "=== kubectl ==="
                     kubectl version --client
 
+                    Write-Host "=== Argo Rollouts ==="
+                    kubectl argo rollouts version
+
                     Write-Host "=== Trivy ==="
                     trivy --version
 
@@ -85,7 +88,7 @@ pipeline {
         stage('Update Rollout') {
             steps {
                 powershell """
-                    kubectl -n ${NAMESPACE} set image rollout/${APP_NAME} ${APP_NAME}=${IMAGE}:${IMAGE_TAG}
+                    kubectl argo rollouts set image ${APP_NAME} ${APP_NAME}=${IMAGE}:${IMAGE_TAG} -n ${NAMESPACE}
                 """
             }
         }
@@ -93,7 +96,7 @@ pipeline {
         stage('Check Rollout') {
             steps {
                 powershell """
-                    kubectl get rollout ${APP_NAME} -n ${NAMESPACE}
+                    kubectl argo rollouts get rollout ${APP_NAME} -n ${NAMESPACE}
                     kubectl get pods -n ${NAMESPACE}
                 """
             }
@@ -112,7 +115,7 @@ pipeline {
 
         always {
             powershell """
-                kubectl get rollout -n ${NAMESPACE}
+                kubectl argo rollouts get rollout ${APP_NAME} -n ${NAMESPACE}
                 kubectl get pods -n ${NAMESPACE}
             """
         }
