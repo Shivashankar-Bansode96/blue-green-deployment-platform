@@ -16,7 +16,6 @@ COPY server.js .
 
 ENV NODE_ENV=production
 ENV PORT=3000
-ENV APP_VERSION=v1
 
 # Non-root user
 RUN addgroup -S appgroup \

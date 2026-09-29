@@ -1,7 +1,7 @@
 const http = require("http");
 
 const PORT = process.env.PORT || 3000;
-const VERSION = process.env.APP_VERSION || "v1";
+const VERSION = process.env.APP_VERSION || "unknown";
 
 const server = http.createServer((req, res) => {
 
