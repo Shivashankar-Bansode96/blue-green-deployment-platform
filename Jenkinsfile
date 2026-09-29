@@ -22,30 +22,29 @@ pipeline {
         stage('Verify Windows Agent') {
             steps {
                 powershell '''
-                Write-Host "=== Java ==="
-                java -version
+                    Write-Host "=== Java ==="
+                    java -version
 
-                Write-Host "=== Git ==="
-                git --version
+                    Write-Host "=== Git ==="
+                    git --version
 
-                Write-Host "=== Docker ==="
-                docker --version
+                    Write-Host "=== Docker ==="
+                    docker --version
 
-                Write-Host "=== kubectl ==="
-                kubectl version --client
+                    Write-Host "=== kubectl ==="
+                    kubectl version --client
 
-                Write-Host "=== Trivy ==="
-                trivy --version
+                    Write-Host "=== Trivy ==="
+                    trivy --version
 
-                Write-Host "=== Minikube ==="
-                minikube version
+                    Write-Host "=== Minikube ==="
+                    minikube version
 
-                Write-Host "=== Kubernetes Context ==="
-                kubectl config current-context
-            '''
+                    Write-Host "=== Kubernetes Context ==="
+                    kubectl config current-context
+                '''
+            }
         }
-    }
-}
 
         stage('Build Docker Image') {
             steps {
@@ -58,11 +57,7 @@ pipeline {
         stage('Trivy Security Scan') {
             steps {
                 powershell """
-                    trivy image `
-                        --exit-code 1 `
-                        --severity HIGH,CRITICAL `
-                        --ignore-unfixed `
-                        ${IMAGE}:${IMAGE_TAG}
+                    trivy image --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed ${IMAGE}:${IMAGE_TAG}
                 """
             }
         }
