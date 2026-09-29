@@ -5,12 +5,12 @@ pipeline {
     }
 
     environment {
-        APP_NAME     = "blue-green-app"
-        NAMESPACE    = "blue-green"
-        IMAGE        = "blue-green-app"
-        IMAGE_TAG    = "${BUILD_NUMBER}"
-        APP_VERSION  = "v${BUILD_NUMBER}"
-        INGRESS_URL  = "http://bluegreen.local/health"
+        APP_NAME    = "blue-green-app"
+        NAMESPACE   = "blue-green"
+        IMAGE       = "blue-green-app"
+        IMAGE_TAG   = "${BUILD_NUMBER}"
+        APP_VERSION = "v${BUILD_NUMBER}"
+        INGRESS_URL = "http://bluegreen.local/health"
     }
 
     stages {
@@ -27,7 +27,7 @@ pipeline {
 
 
         // ============================================================
-        // 2. VERIFY BUILD AGENT
+        // 2. VERIFY WINDOWS AGENT
         // ============================================================
 
         stage('Verify Windows Agent') {
@@ -146,7 +146,8 @@ pipeline {
                     Write-Host "        LOAD IMAGE INTO MINIKUBE"
                     Write-Host "=========================================="
 
-                    Write-Host "Loading ${IMAGE}:${IMAGE_TAG}"
+                    Write-Host "Loading image:"
+                    Write-Host "${IMAGE}:${IMAGE_TAG}"
 
                     minikube image load ${IMAGE}:${IMAGE_TAG}
                 """
@@ -166,23 +167,23 @@ pipeline {
                     Write-Host "=========================================="
 
                     Write-Host ""
-                    Write-Host "Applying namespace..."
+                    Write-Host "=== Namespace ==="
                     kubectl apply -f k8s/namespace.yaml
 
                     Write-Host ""
-                    Write-Host "Applying services..."
+                    Write-Host "=== Services ==="
                     kubectl apply -f k8s/services.yaml
 
                     Write-Host ""
-                    Write-Host "Applying analysis template..."
+                    Write-Host "=== Analysis Template ==="
                     kubectl apply -f k8s/analysis-template.yaml
 
                     Write-Host ""
-                    Write-Host "Applying rollout..."
+                    Write-Host "=== Rollout ==="
                     kubectl apply -f k8s/rollout.yaml
 
                     Write-Host ""
-                    Write-Host "Applying ingress..."
+                    Write-Host "=== Ingress ==="
                     kubectl apply -f k8s/ingress.yaml
                 """
             }
@@ -224,7 +225,12 @@ pipeline {
                     Write-Host "        CHECK PREVIEW ROLLOUT"
                     Write-Host "=========================================="
 
-                    Start-Sleep -Seconds 10
+                    Write-Host "Waiting for preview pods..."
+
+                    Start-Sleep -Seconds 15
+
+                    Write-Host ""
+                    Write-Host "=== Rollout ==="
 
                     kubectl argo rollouts get rollout `
                         ${APP_NAME} `
@@ -242,7 +248,7 @@ pipeline {
 
 
         // ============================================================
-        // 10. PROMOTE ROLLOUT
+        // 10. PROMOTE ARGO BLUE-GREEN DEPLOYMENT
         // ============================================================
 
         stage('Promote Rollout') {
@@ -251,6 +257,35 @@ pipeline {
                     Write-Host "=========================================="
                     Write-Host "        PROMOTE ARGO ROLLOUT"
                     Write-Host "=========================================="
+
+                    Write-Host ""
+                    Write-Host "=== Current Rollout State ==="
+
+                    kubectl argo rollouts get rollout `
+                        ${APP_NAME} `
+                        -n ${NAMESPACE}
+
+                    Write-Host ""
+                    Write-Host "=== First Promotion ==="
+
+                    kubectl argo rollouts promote `
+                        ${APP_NAME} `
+                        -n ${NAMESPACE}
+
+                    Write-Host ""
+                    Write-Host "Waiting for Blue-Green transition..."
+
+                    Start-Sleep -Seconds 10
+
+                    Write-Host ""
+                    Write-Host "=== Rollout State After First Promotion ==="
+
+                    kubectl argo rollouts get rollout `
+                        ${APP_NAME} `
+                        -n ${NAMESPACE}
+
+                    Write-Host ""
+                    Write-Host "=== Final Promotion ==="
 
                     kubectl argo rollouts promote `
                         ${APP_NAME} `
@@ -269,7 +304,7 @@ pipeline {
 
 
         // ============================================================
-        // 11. VERIFY PRODUCTION ING﻿RESS
+        // 11. VERIFY PRODUCTION INGRESS
         // ============================================================
 
         stage('Verify Production Ingress') {
@@ -279,9 +314,13 @@ pipeline {
                     Write-Host "        VERIFY PRODUCTION INGRESS"
                     Write-Host "=========================================="
 
-                    Write-Host "URL: ${INGRESS_URL}"
+                    Write-Host "URL:"
+                    Write-Host "${INGRESS_URL}"
 
                     Start-Sleep -Seconds 5
+
+                    Write-Host ""
+                    Write-Host "=== Calling Production Endpoint ==="
 
                     \$response = curl.exe -s `
                         --fail `
@@ -292,18 +331,29 @@ pipeline {
                     Write-Host \$response
 
                     Write-Host ""
-                    Write-Host "=== Expected Version ==="
+                    Write-Host "=== Expected Application Version ==="
                     Write-Host "${APP_VERSION}"
 
+                    Write-Host ""
+                    Write-Host "=== Validating Health ==="
+
                     if (\$response -notmatch '"status":"UP"') {
-                        Write-Error "Application health check failed."
+                        Write-Error "Production health check FAILED."
                         exit 1
                     }
 
+                    Write-Host "Health check PASSED."
+
+                    Write-Host ""
+                    Write-Host "=== Validating Version ==="
+
                     if (\$response -notmatch "${APP_VERSION}") {
-                        Write-Error "Application version verification failed."
+                        Write-Error "Production version verification FAILED."
+                        Write-Error "Expected version: ${APP_VERSION}"
                         exit 1
                     }
+
+                    Write-Host "Version verification PASSED."
 
                     Write-Host ""
                     Write-Host "Production Ingress verification PASSED."
@@ -339,17 +389,17 @@ pipeline {
                         --timeout 60s
 
                     Write-Host ""
-                    Write-Host "=== Services ==="
-
-                    kubectl get svc `
-                        -n ${NAMESPACE}
-
-                    Write-Host ""
                     Write-Host "=== Pods ==="
 
                     kubectl get pods `
                         -n ${NAMESPACE} `
                         -o wide
+
+                    Write-Host ""
+                    Write-Host "=== Services ==="
+
+                    kubectl get svc `
+                        -n ${NAMESPACE}
 
                     Write-Host ""
                     Write-Host "=== Ingress ==="
@@ -374,14 +424,14 @@ pipeline {
             echo '=========================================='
             echo "Application Version: ${APP_VERSION}"
             echo "Docker Image: ${IMAGE}:${IMAGE_TAG}"
-            echo "Ingress: ${INGRESS_URL}"
+            echo "Production URL: ${INGRESS_URL}"
         }
 
         failure {
             echo '=========================================='
             echo ' CI/CD PIPELINE FAILED '
             echo '=========================================='
-            echo 'Check the failed Jenkins stage and Argo Rollouts status.'
+            echo 'Check the failed stage and Argo Rollouts status.'
         }
 
         always {
@@ -408,6 +458,12 @@ pipeline {
                 Write-Host "=== Services ==="
 
                 kubectl get svc `
+                    -n ${NAMESPACE}
+
+                Write-Host ""
+                Write-Host "=== Ingress ==="
+
+                kubectl get ingress `
                     -n ${NAMESPACE}
             """
         }
